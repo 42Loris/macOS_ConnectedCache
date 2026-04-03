@@ -1,0 +1,51 @@
+services:
+  mcc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Force x64 emulation via Rosetta on Apple Silicon
+    platform: linux/amd64
+    container_name: microsoft-connected-cache
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Required: get these from the Azure portal after registering your cache node
+      - CUSTOMER_ID=${CUSTOMER_ID}
+      - CACHE_NODE_ID=${CACHE_NODE_ID}
+      - CUSTOMER_KEY=${CUSTOMER_KEY}
+      # Cache storage configuration
+      - CACHE_DRIVE=/cache
+      - CACHE_DRIVE_SIZE_IN_GB=${CACHE_DRIVE_SIZE_IN_GB:-100}
+      # Optional: log level (info, debug, error)
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      # Persistent cache storage — adjust host path as needed
+      - mcc-cache:/cache
+      # Optional: persist MCC config and state
+      - mcc-data:/etc/mcc
+    # MCC needs NET_ADMIN to manage its internal networking
+    cap_add:
+      - NET_ADMIN
+    # Required by MCC for its service management
+    privileged: false
+    # No resource caps — container gets whatever the Docker VM has available.
+    # Control the VM's CPU/RAM ceiling in Docker Desktop → Settings → Resources.
+    deploy:
+      resources:
+        reservations:
+          cpus: '0.00'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  mcc-cache:
+    driver: local
+  mcc-data:
+    driver: local
