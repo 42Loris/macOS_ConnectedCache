@@ -15,6 +15,14 @@ RUN wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsof
     && dpkg -i /tmp/mspkg.deb \
     && rm /tmp/mspkg.deb
 
+# Stub out systemctl so post-install scripts don't fail during build (no systemd in Docker build)
+RUN printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/systemctl \
+    && chmod +x /usr/local/bin/systemctl
+
+# Install Moby (container runtime) — aziot-edge pre-install script requires it
+RUN apt-get update && apt-get install -y moby-engine moby-cli \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install IoT Edge + Identity Service (versions from deploymcc.sh defaults)
 RUN apt-get update && apt-get install -y \
     aziot-edge=1.5.16-1 \
