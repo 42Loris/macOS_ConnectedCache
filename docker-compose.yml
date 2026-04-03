@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     platform: linux/amd64
     container_name: mcc-iotedge
-    restart: unless-stopped
+    restart: on-failure
     # Required: IoT Edge daemons need elevated capabilities
     privileged: true
     environment:

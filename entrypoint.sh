@@ -74,36 +74,16 @@ EOF
 
 echo "[MCC] IoT Edge config written."
 
-# --- Step 4: Apply config (writes per-service config drops under /etc/aziot/) ---
-# iotedge config apply will fail on the systemctl restart step — that's expected.
+# --- Step 4: Apply config — this also starts all aziot services internally ---
 echo "[MCC] Applying IoT Edge configuration..."
 mkdir -p /run/aziot /run/iotedge /var/lib/aziot/certd /var/lib/aziot/identityd \
          /var/lib/aziot/keyd /var/lib/iotedge
 
-iotedge config apply -c /etc/aziot/config.toml 2>&1 | grep -v "systemctl" || true
+iotedge config apply -c /etc/aziot/config.toml
 
-# --- Step 5: Start aziot daemons in dependency order ---
-# keyd must be up before certd, certd before identityd, identityd before edged.
-echo "[MCC] Starting aziot-keyd..."
-/usr/libexec/aziot/aziot-keyd &
-until [ -S /run/aziot/keyd.sock ] 2>/dev/null; do sleep 0.5; done
-echo "[MCC] aziot-keyd ready."
+echo "[MCC] IoT Edge is running."
+echo "[MCC] edgeAgent will connect to IoT Hub and pull the MCC container — this may take a few minutes."
+echo "[MCC] Watch for 'edgeAgent' and 'MCC' containers with: docker ps"
 
-echo "[MCC] Starting aziot-certd..."
-/usr/libexec/aziot/aziot-certd &
-until [ -S /run/aziot/certd.sock ] 2>/dev/null; do sleep 0.5; done
-echo "[MCC] aziot-certd ready."
-
-echo "[MCC] Starting aziot-identityd..."
-/usr/libexec/aziot/aziot-identityd &
-until [ -S /run/aziot/identityd.sock ] 2>/dev/null; do sleep 0.5; done
-echo "[MCC] aziot-identityd ready."
-
-echo "[MCC] Starting aziot-edged..."
-echo "[MCC] edgeAgent will connect to IoT Hub and pull the MCC container — this can take a few minutes."
-/usr/libexec/aziot/aziot-edged &
-
-# Keep the container alive; exit if any daemon dies
-wait -n
-echo "[MCC] A daemon exited unexpectedly. Check logs with: docker logs mcc-iotedge"
-exit 1
+# Keep the container alive
+sleep infinity
